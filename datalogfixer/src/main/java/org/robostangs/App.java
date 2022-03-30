@@ -83,18 +83,16 @@ public final class App {
             return;
         }
         
-        Map<Integer, DataLogRecord.StartRecordData> records = new TreeMap<>();
-        Map<Integer, Map<Integer,String>> printColumnHeadings = new TreeMap<>();
+        //Map is a map of StartRecordData and max array size, indexed by data record ID
+        Map<Integer, SimpleEntry<DataLogRecord.StartRecordData, Integer>> records = new TreeMap<>();
         ArrayList<SimpleEntry<Double, Map<Integer,ArrayList<String>>>> tableData = new ArrayList<>();
         long lastTimestamp = -1000000;
         for(DataLogRecord record : reader){
             try {
                 if(record.isStart()){
                     DataLogRecord.StartRecordData startData = record.getStartData();
-                    records.put(startData.entry, startData);
-                    Map<Integer, String> thisColumnHeading = new TreeMap<>();
-                    thisColumnHeading.put(0, startData.name);
-                    printColumnHeadings.put(startData.entry,thisColumnHeading);
+                    //Size of 1 by default
+                    records.put(startData.entry, new SimpleEntry<DataLogRecord.StartRecordData, Integer>(startData, 1));
                     continue;
                 }
             } catch (Exception e) {
@@ -104,7 +102,9 @@ public final class App {
                 continue;
             }
             
-            DataLogRecord.StartRecordData thisHeading = records.get(record.getEntry());
+            //Key is heading, entry is array size
+            DataLogRecord.StartRecordData thisHeading = records.get(record.getEntry()).getKey();
+            Integer maxArraySize = records.get(record.getEntry()).getValue();
             ArrayList<String> thisDataAsString = new ArrayList<>();
             if(thisHeading.type.equals("double")){
                 thisDataAsString.add(String.valueOf(record.getDouble()));
@@ -118,42 +118,32 @@ public final class App {
                 thisDataAsString.add(record.getBoolean()?"1":"0");
             }else if (thisHeading.type.equals("double[]")){
                 double[] thisRecordArr = record.getDoubleArray();
-                for(int i=0;i<thisRecordArr.length;i++){
-                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
-                }
+                maxArraySize = Math.max(maxArraySize, thisRecordArr.length);
                 thisDataAsString =new ArrayList<>();
                 for(int i=0;i<thisRecordArr.length;i++){
                     thisDataAsString.add(Double.toString(thisRecordArr[i]));
                 }
             }else if (thisHeading.type.equals("float[]")){
                 float[] thisRecordArr = record.getFloatArray();
-                for(int i=0;i<thisRecordArr.length;i++){
-                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
-                }
+                maxArraySize = Math.max(maxArraySize, thisRecordArr.length);
                 thisDataAsString =new ArrayList<>();
                 for(int i=0;i<thisRecordArr.length;i++){
                     thisDataAsString.add(Float.toString(thisRecordArr[i]));
                 }
             }else if (thisHeading.type.equals("int64[]")){
                 long[] thisRecordArr = record.getIntegerArray();
-                for(int i=0;i<thisRecordArr.length;i++){
-                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
-                }
+                maxArraySize = Math.max(maxArraySize, thisRecordArr.length);
                 thisDataAsString =new ArrayList<>();
                 for(int i=0;i<thisRecordArr.length;i++){
                     thisDataAsString.add(Long.toString(thisRecordArr[i]));
                 }
             }else if (thisHeading.type.equals("string[]")){
                 String[] thisRecordArr = record.getStringArray();
-                for(int i=0;i<thisRecordArr.length;i++){
-                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
-                }
+                maxArraySize = Math.max(maxArraySize, thisRecordArr.length);
                 thisDataAsString =new ArrayList<>(Arrays.asList(thisRecordArr));
             }else if (thisHeading.type.equals("boolean[]")){
                 boolean[] thisRecordArr = record.getBooleanArray();
-                for(int i=0;i<thisRecordArr.length;i++){
-                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
-                }
+                maxArraySize = Math.max(maxArraySize, thisRecordArr.length);
                 thisDataAsString =new ArrayList<>();
                 for(int i=0;i<thisRecordArr.length;i++){
                     thisDataAsString.add(thisRecordArr[i]?"1":"0");
@@ -171,7 +161,7 @@ public final class App {
                     tableData.add(copiedEntry);
                     if(!fillMessageBlanks){
                         try {
-                            Integer messageColumn = records.entrySet().stream().filter(entry ->entry.getValue().name.equals("messages")).map(Map.Entry::getKey).findFirst().get();
+                            Integer messageColumn = records.entrySet().stream().filter(entry ->entry.getValue().getKey().name.equals("messages")).map(Map.Entry::getKey).findFirst().get();
                             copiedEntry.getValue().put(messageColumn,new ArrayList<String>());
                         } catch (Exception e) {
                             //TODO: handle exception
@@ -182,30 +172,37 @@ public final class App {
                 }
                 lastTimestamp = record.getTimestamp();
             }
+            if(record.getTimestamp()<lastTimestamp){
+                System.out.println("backwards!");
+            }
             Map<Integer,ArrayList<String>> thisRow = tableData.get(tableData.size()-1).getValue();
             thisRow.put(record.getEntry(),thisDataAsString);
         }
         System.out.println("Read through file");
 
         writer.write("Timestamp,");
-        ArrayList<Integer> arraySizes = new ArrayList<>();
-        for(Map<Integer,String> printColumnHeading: new ArrayList<Map<Integer,String>>(printColumnHeadings.values())){
-            for(String actualColumnHeading: new ArrayList<String>(printColumnHeading.values())){
-                writer.write(actualColumnHeading+",");
+        for(SimpleEntry<DataLogRecord.StartRecordData, Integer> recordItem: new ArrayList<>(records.values())){
+            Integer thisEntryArrSize = recordItem.getValue();
+            String thisEntryName  = recordItem.getKey().name;
+            if(thisEntryArrSize>1){
+                for(int i=0;i<thisEntryArrSize;i++)
+                    writer.write(thisEntryName+"["+i+"]");
+            }else{
+                writer.write(thisEntryName);
             }
-            arraySizes.add(printColumnHeading.size());
         }
         writer.write("\n");
         writer.flush();
 
         for(SimpleEntry<Double, Map<Integer,ArrayList<String>>> row: tableData){
             writer.write(String.valueOf(row.getKey())+",");
-
-            for(int col=1;col<arraySizes.size();col++){
-                ArrayList<String> thisColumnSetEntry = row.getValue().get(col);
-                for(int integerElementColumn = 0;integerElementColumn<arraySizes.get(col);integerElementColumn++){
+            for(int logEntryIdx=1;logEntryIdx<row.getValue().size()+1;logEntryIdx++){
+                ArrayList<String> thisColumnSetEntry = row.getValue().get(logEntryIdx);
+                SimpleEntry<DataLogRecord.StartRecordData, Integer> headingItem = records.get(logEntryIdx);
+                for(int arrayIdx = 0;arrayIdx<headingItem.getValue();arrayIdx++){
+                    //For each spot in the heading list
                     try{
-                        writer.write(thisColumnSetEntry.get(integerElementColumn));
+                        writer.write(thisColumnSetEntry.get(arrayIdx));
                     }catch (Exception e){
                         //no element there
                     }
