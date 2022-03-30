@@ -49,7 +49,7 @@ public interface ILoggyMotor {
         }
 
         void logBooleanIfChanged(boolean newValue, long now) {
-            if ((((Boolean) mLastValue).booleanValue() != newValue)||(now>(lastLogTime+1000000))) {
+            if ((((Boolean) mLastValue).booleanValue() != newValue)||(now>(lastLogTime+500000))) {
                 m_log.appendDouble(m_entry, newValue?1.0:0, now);
                 mLastValue = Boolean.valueOf(newValue);
                 lastLogTime = now;
@@ -57,7 +57,7 @@ public interface ILoggyMotor {
         }
 
         void logStringIfChanged(String newValue, long now) {
-            if ((!((String) mLastValue).equals(newValue))||(now>(lastLogTime+1000000))) {
+            if ((!((String) mLastValue).equals(newValue))||(now>(lastLogTime+500000))) {
                 m_log.appendString(m_entry, newValue, now);
                 mLastValue = newValue;
                 lastLogTime = now;
@@ -65,7 +65,7 @@ public interface ILoggyMotor {
         }
 
         void logDoubleIfChanged(double newValue, long now) {
-            if ((((Double) mLastValue).doubleValue() != newValue)||(now>(lastLogTime+1000000))) {
+            if ((((Double) mLastValue).doubleValue() != newValue)||(now>(lastLogTime+500000))) {
                 m_log.appendDouble(m_entry, newValue, now);
                 mLastValue = newValue;
                 lastLogTime = now;

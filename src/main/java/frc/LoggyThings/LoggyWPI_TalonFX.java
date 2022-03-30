@@ -15,8 +15,8 @@ import edu.wpi.first.util.WPIUtilJNI;
 public class LoggyWPI_TalonFX extends WPI_TalonFX implements ILoggyMotor {
     private EnumSet<ILoggyMotor.LogItem> mLogLevel = EnumSet.noneOf(ILoggyMotor.LogItem.class);
     private HashMap<LogItem, DataLogEntryWithHistory> mDataLogEntries = new HashMap<LogItem, DataLogEntryWithHistory>();
-    private long mLogPeriod = 10000;// default to 100ms (unit is microseconds)
-    private long lastLogTime = 0;
+    private long mLogPeriod = 100000;// default to 100ms (unit is microseconds)
+    private long lastLogTime = (long)Math.abs(Math.random()*100000);
     private String mLogPath;
 
     public LoggyWPI_TalonFX(int deviceNumber, String logPath, String canbus, EnumSet<ILoggyMotor.LogItem> logLevel) {
