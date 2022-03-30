@@ -18,7 +18,7 @@ public interface ILoggyMotor {
                 case DOUBLE:
                     return "double";
                 case BOOLEAN:
-                    return "boolean";
+                    return "double";//actually log as number
                 case STRING:
                     return "string";
                 default:
@@ -29,7 +29,7 @@ public interface ILoggyMotor {
 
     public class DataLogEntryWithHistory extends DataLogEntry {
         private Object mLastValue;
-
+        private long lastLogTime=0;
         DataLogEntryWithHistory(DataLog log, String name, LogItemType type) {
             super(log, name, type.toString());
             switch (type) {
@@ -49,23 +49,26 @@ public interface ILoggyMotor {
         }
 
         void logBooleanIfChanged(boolean newValue, long now) {
-            if (((Boolean) mLastValue).booleanValue() != newValue) {
-                m_log.appendBoolean(m_entry, newValue, now);
+            if ((((Boolean) mLastValue).booleanValue() != newValue)||(now>(lastLogTime+1000000))) {
+                m_log.appendDouble(m_entry, newValue?1.0:0, now);
                 mLastValue = Boolean.valueOf(newValue);
+                lastLogTime = now;
             }
         }
 
         void logStringIfChanged(String newValue, long now) {
-            if (!((String) mLastValue).equals(newValue)) {
+            if ((!((String) mLastValue).equals(newValue))||(now>(lastLogTime+1000000))) {
                 m_log.appendString(m_entry, newValue, now);
                 mLastValue = newValue;
+                lastLogTime = now;
             }
         }
 
         void logDoubleIfChanged(double newValue, long now) {
-            if (((Double) mLastValue).doubleValue() != newValue) {
+            if ((((Double) mLastValue).doubleValue() != newValue)||(now>(lastLogTime+1000000))) {
                 m_log.appendDouble(m_entry, newValue, now);
                 mLastValue = newValue;
+                lastLogTime = now;
             }
         }
     }
@@ -138,7 +141,7 @@ public interface ILoggyMotor {
 
         public static final EnumSet<LogItem> LOGLEVEL_DEFAULT;
 
-        private static final EnumSet<LogItem> PID_LOG_ADDITIONS = EnumSet.of( CLOSED_LOOP_ERROR, INTEGRAL_ACCUMULATOR, 
+        protected static final EnumSet<LogItem> PID_LOG_ADDITIONS = EnumSet.of( CLOSED_LOOP_ERROR, INTEGRAL_ACCUMULATOR, 
                 ERROR_DERIVATIVE, CLOSED_LOOP_TARGET);
 
         public static final EnumSet<LogItem> LOGLEVEL_PID;

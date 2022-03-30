@@ -15,7 +15,7 @@ import edu.wpi.first.util.WPIUtilJNI;
 public class LoggyWPI_TalonFX extends WPI_TalonFX implements ILoggyMotor {
     private EnumSet<ILoggyMotor.LogItem> mLogLevel = EnumSet.noneOf(ILoggyMotor.LogItem.class);
     private HashMap<LogItem, DataLogEntryWithHistory> mDataLogEntries = new HashMap<LogItem, DataLogEntryWithHistory>();
-    private long mLogPeriod = 100000;// default to 100ms (unit is microseconds)
+    private long mLogPeriod = 10000;// default to 100ms (unit is microseconds)
     private long lastLogTime = 0;
     private String mLogPath;
 
@@ -77,7 +77,9 @@ public class LoggyWPI_TalonFX extends WPI_TalonFX implements ILoggyMotor {
             // Only things allowed by the global log level
             potentialLogItems.retainAll(LoggyThingManager.getInstance().getGlobalMaxLogLevel());
             potentialLogItems.removeAll(LogItem.SET_FUNCTION_CALLS);// a set function call, not a periodic status value
-
+            if((getControlMode() == ControlMode.PercentOutput)||(getControlMode() == ControlMode.Follower)||(getControlMode() == ControlMode.MusicTone)||(getControlMode() == ControlMode.Current)||(getControlMode() == ControlMode.Current)){
+                potentialLogItems.removeAll(LogItem.PID_LOG_ADDITIONS);
+            }
             for (LogItem thisLogItem : potentialLogItems) {
                 DataLogEntryWithHistory thisEntry = mDataLogEntries.get(thisLogItem);
                 switch (thisLogItem) {

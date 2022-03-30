@@ -38,7 +38,23 @@ public final class App {
                 while (line!=null){
                     if(line.length()>0 && Character.isDigit(line.charAt(0))){
                         timestamp = Double.parseDouble(line.substring(0,line.indexOf(',')));
+                        if(line.length()>0){
+                            boolean inEscaped = false;
+                            char[] linearr = line.toCharArray();
+                            for(int i=0;i<line.length();i++){
+                                if(linearr[i]=='\"'){
+                                    inEscaped  =!inEscaped;
+                                }
 
+                                if(inEscaped){
+                                    if(linearr[i]==','){
+                                        linearr[i]=';';
+                                    }
+                                }
+                            }
+                            line  = String.valueOf(linearr);
+                        }
+                        
                         if((timestamp-chunkTimestamp)>0.02){
                             chunkTimestamp = timestamp;
                             writer.write(String.join(",",outLine)+"\r\n");
