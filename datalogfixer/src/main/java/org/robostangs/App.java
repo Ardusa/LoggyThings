@@ -25,20 +25,33 @@ public final class App {
     public static void main(String[] args) {
         File folder = new File(System.getProperty("user.dir"));
         System.out.println("Looking in " + System.getProperty("user.dir"));
-        for (int runidx = 0; runidx < 2; runidx++) {
-
+        for (int runidx = 0; runidx < 2; runidx++) {// run twice once just decimating then again filling in
             for (File file : folder.listFiles(((dir, name) -> {
                 return name.endsWith(".csv") && name.startsWith("FRC");
             }))) {
-                System.out.println("Found file " + file.getName());
+
                 try {
                     BufferedReader reader = new BufferedReader(new FileReader(file));
-                    FileWriter writer;
+                    String outfilename;
                     if (runidx == 0) {
-                        writer = new FileWriter("FIXED_" + file.getName(), false);
+                        outfilename = "FIXED_" + file.getName();
                     } else {
-                        writer = new FileWriter("FIXED_CONNECTED_" + file.getName(), false);
+                        outfilename = "FIXED_CONNECTED_" + file.getName();
                     }
+                    boolean dupFound = false;
+                    for (File maybeDupFile : folder.listFiles()) {
+                        if (maybeDupFile.getName().equals(outfilename)) {
+                            System.out.println("File " + outfilename + " already exists. Skipping.");
+                            dupFound = true;
+                            break;
+                        }
+                    }
+
+                    if (dupFound)
+                        continue;
+
+                    FileWriter writer = new FileWriter(outfilename, false);
+                    System.out.println("Generating " + outfilename);
                     String line = "";
 
                     double timestamp;
@@ -47,48 +60,58 @@ public final class App {
                     while (line != null) {
                         if (line.length() > 0 && Character.isDigit(line.charAt(0))) {
                             timestamp = Double.parseDouble(line.substring(0, line.indexOf(',')));
-                            if (line.length() > 0) {
-                                boolean inEscaped = false;
-                                char[] linearr = line.toCharArray();
-                                for (int i = 0; i < line.length(); i++) {
-                                    if (linearr[i] == '\"') {
-                                        inEscaped = !inEscaped;
-                                    }
 
-                                    if (inEscaped) {
-                                        if (linearr[i] == ',') {
-                                            linearr[i] = ';';
-                                        }
+                            // Check if escaped inside quotes
+                            boolean inEscaped = false;
+                            char[] linearr = line.toCharArray();
+                            for (int i = 0; i < line.length(); i++) {
+                                if (linearr[i] == '\"') {
+                                    inEscaped = !inEscaped;
+                                }
+
+                                if (inEscaped) {
+                                    if (linearr[i] == ',') {
+                                        linearr[i] = ';';
                                     }
                                 }
-                                line = String.valueOf(linearr);
                             }
+                            line = String.valueOf(linearr);
+
+                            ArrayList<String> incomingLine = new ArrayList<String>(
+                                    Arrays.asList(line.split("[,]")));
 
                             if ((timestamp - chunkTimestamp) > 0.02) {
-                                if ((runidx == 0)||line.contains("Timestamp")) {
-                                    outLine = new ArrayList<String>(Arrays.asList(line.split("[,]")));
-                                } else {
-                                    //don't clear line
-                                }
-                            }
-
-                            if (((timestamp - chunkTimestamp) > 0.02)) {
+                                // write out
                                 chunkTimestamp = timestamp;
                                 writer.write(String.join(",", outLine) + "\r\n");
                                 // System.out.println(String.join(",",outLine));
 
-                            } else {
-                                ArrayList<String> incomingLine = new ArrayList<String>(
-                                        Arrays.asList(line.split("[,]")));
+                                // clear line if not doing connected
+                                if ((runidx == 0)) {
+                                    outLine = new ArrayList<String>();
+                                } else {
+                                    // don't clear line
+                                }
+                            }
 
-                                while (incomingLine.size() > outLine.size()) {
-                                    outLine.add("");
+                            while (incomingLine.size() > outLine.size()) {
+                                outLine.add("");
+                            }
+
+                            for (int i = 0; i < incomingLine.size(); i++) {
+                                String thisItem = incomingLine.get(i);
+                                if (thisItem.equals(""))
+                                    continue;
+
+                                // bool to integer for graph
+                                if (thisItem.equalsIgnoreCase("false")) {
+                                    thisItem = "0";
+                                }
+                                if (thisItem.equalsIgnoreCase("true")) {
+                                    thisItem = "1";
                                 }
 
-                                for (int i = 1; i < incomingLine.size(); i++) {// skip timestamp
-                                    if (!incomingLine.get(i).equals(""))
-                                        outLine.set(i, incomingLine.get(i));
-                                }
+                                outLine.set(i, thisItem);
 
                             }
 
