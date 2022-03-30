@@ -108,6 +108,8 @@ public final class App {
             ArrayList<String> thisDataAsString = new ArrayList<>();
             if(thisHeading.type.equals("double")){
                 thisDataAsString.add(String.valueOf(record.getDouble()));
+            }else if(thisHeading.type.equals("float")){
+                thisDataAsString.add(String.valueOf(record.getFloat()));
             }else if (thisHeading.type.equals("string")){
                 thisDataAsString.add(record.getString().replace(",", ";"));
             }else if (thisHeading.type.equals("int64")){
@@ -122,6 +124,15 @@ public final class App {
                 thisDataAsString =new ArrayList<>();
                 for(int i=0;i<thisRecordArr.length;i++){
                     thisDataAsString.add(Double.toString(thisRecordArr[i]));
+                }
+            }else if (thisHeading.type.equals("float[]")){
+                float[] thisRecordArr = record.getFloatArray();
+                for(int i=0;i<thisRecordArr.length;i++){
+                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
+                }
+                thisDataAsString =new ArrayList<>();
+                for(int i=0;i<thisRecordArr.length;i++){
+                    thisDataAsString.add(Float.toString(thisRecordArr[i]));
                 }
             }else if (thisHeading.type.equals("int64[]")){
                 long[] thisRecordArr = record.getIntegerArray();
@@ -138,6 +149,17 @@ public final class App {
                     printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
                 }
                 thisDataAsString =new ArrayList<>(Arrays.asList(thisRecordArr));
+            }else if (thisHeading.type.equals("boolean[]")){
+                boolean[] thisRecordArr = record.getBooleanArray();
+                for(int i=0;i<thisRecordArr.length;i++){
+                    printColumnHeadings.get(record.getEntry()).put(i, thisHeading.name+"["+String.valueOf(i)+"]");
+                }
+                thisDataAsString =new ArrayList<>();
+                for(int i=0;i<thisRecordArr.length;i++){
+                    thisDataAsString.add(thisRecordArr[i]?"1":"0");
+                }
+            }else{
+                System.out.println(thisHeading.type);
             }
             if(record.getTimestamp()>(lastTimestamp+decimationPeriod*1000000.0)){
                 if(!fillBlanks||tableData.size()==0){
