@@ -29,7 +29,9 @@ import frc.LoggyThings.LoggyWPI_TalonFX;
 public class Robot extends TimedRobot {
   private LoggyWPI_TalonFX falcon = new LoggyWPI_TalonFX(1, "/ExampleSubsystem/falcon/",
       ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING);
-  private LoggyWPI_TalonFX falcon2 = new LoggyWPI_TalonFX(1, "/falcon2/", ILoggyMotor.LogItem.LOGLEVEL_MINIMAL);
+      private LoggyWPI_TalonFX falcon3 = new LoggyWPI_TalonFX(4, "/ExampleSubsystem/falcon3/",
+      ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING);
+  private LoggyWPI_TalonFX falcon2 = new LoggyWPI_TalonFX(2, "/falcon2/", ILoggyMotor.LogItem.LOGLEVEL_MINIMAL);
   private LoggyCANSparkMax spark = new LoggyCANSparkMax(3, MotorType.kBrushless);
 
   @Override
@@ -47,5 +49,6 @@ public class Robot extends TimedRobot {
       falcon.set(ControlMode.Position,Timer.getFPGATimestamp());
     spark.set(stick.getY());
     falcon2.set(Math.sin(Timer.getFPGATimestamp()));
+    falcon3.set(Math.cos(Timer.getFPGATimestamp()));
   }
 }
