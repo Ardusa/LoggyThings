@@ -85,8 +85,7 @@ public final class App {
         
         //Map is a map of StartRecordData and max array size, indexed by data record ID
         Map<Integer, SimpleEntry<DataLogRecord.StartRecordData, Integer>> records = new TreeMap<>();
-        ArrayList<SimpleEntry<Double, Map<Integer,ArrayList<String>>>> tableData = new ArrayList<>();
-        long lastTimestamp = -1000000;
+        Map<Double, Map<Integer,ArrayList<String>>> tableData = new TreeMap<>();
         for(DataLogRecord record : reader){
             try {
                 if(record.isStart()){
@@ -111,7 +110,24 @@ public final class App {
             }else if(thisHeading.type.equals("float")){
                 thisDataAsString.add(String.valueOf(record.getFloat()));
             }else if (thisHeading.type.equals("string")){
-                thisDataAsString.add(record.getString().replace(",", ";"));
+                String inString = record.getString().replace(",", ";");
+                String outString = "";
+                if(inString.startsWith(" UnderVoltage")){
+                    String[] dataArr = inString.split(" ");
+                    for(String potentialFaults : dataArr){
+                        if(potentialFaults.contains("1")){
+                            outString = outString + potentialFaults + ";";
+                        }
+                    }
+                    if(outString.length()==0){
+                        outString = "No Faults";
+                    }
+                    //Falcon faults
+                }else{
+                    outString = inString;
+                }
+
+                thisDataAsString.add(outString.replace(",", ";"));
             }else if (thisHeading.type.equals("int64")){
                 thisDataAsString.add(Long.toString(record.getInteger()));
             }else if (thisHeading.type.equals("boolean")){
@@ -151,34 +167,20 @@ public final class App {
             }else{
                 System.out.println(thisHeading.type);
             }
-            if(record.getTimestamp()>(lastTimestamp+decimationPeriod*1000000.0)){
-                if(!fillBlanks||tableData.size()==0){
-                    Map<Integer, ArrayList<String>> dataRow = new TreeMap<>();
-                    SimpleEntry<Double, Map<Integer,ArrayList<String>>> blankEntry = new SimpleEntry<Double, Map<Integer,ArrayList<String>>>(((double)record.getTimestamp())/1000000.0,dataRow);
-                    tableData.add(blankEntry);
-                }else{
-                    SimpleEntry<Double, Map<Integer,ArrayList<String>>> copiedEntry = new SimpleEntry<Double, Map<Integer,ArrayList<String>>>(((double)record.getTimestamp())/1000000.0,tableData.get(tableData.size()-1).getValue());
-                    tableData.add(copiedEntry);
-                    if(!fillMessageBlanks){
-                        try {
-                            Integer messageColumn = records.entrySet().stream().filter(entry ->entry.getValue().getKey().name.equals("messages")).map(Map.Entry::getKey).findFirst().get();
-                            copiedEntry.getValue().put(messageColumn,new ArrayList<String>());
-                        } catch (Exception e) {
-                            //TODO: handle exception
-                        }
-                        
-                    }
-                        
-                }
-                lastTimestamp = record.getTimestamp();
+            double targetDoubleTimestamp = ((double)record.getTimestamp()/1000000);
+            Map<Integer,ArrayList<String>> targetTableRow;
+            if(tableData.containsKey(targetDoubleTimestamp)){
+                //Already a record with this exact timestamp, have to interleave
+                targetTableRow = tableData.get(targetDoubleTimestamp);
+            }else{
+                targetTableRow = new TreeMap<>();
+                tableData.put(targetDoubleTimestamp, targetTableRow);
             }
-            if(record.getTimestamp()<lastTimestamp){
-                System.out.println("backwards!");
-            }
-            Map<Integer,ArrayList<String>> thisRow = tableData.get(tableData.size()-1).getValue();
-            thisRow.put(record.getEntry(),thisDataAsString);
+            targetTableRow.put(record.getEntry(),thisDataAsString);
+            records.get(record.getEntry()).setValue(maxArraySize);//idk
         }
         System.out.println("Read through file");
+
 
         writer.write("Timestamp,");
         for(SimpleEntry<DataLogRecord.StartRecordData, Integer> recordItem: new ArrayList<>(records.values())){
@@ -186,15 +188,46 @@ public final class App {
             String thisEntryName  = recordItem.getKey().name;
             if(thisEntryArrSize>1){
                 for(int i=0;i<thisEntryArrSize;i++)
-                    writer.write(thisEntryName+"["+i+"]");
+                    writer.write(thisEntryName+"["+i+"],");
             }else{
-                writer.write(thisEntryName);
+                writer.write(thisEntryName+",");
             }
         }
         writer.write("\n");
         writer.flush();
 
-        for(SimpleEntry<Double, Map<Integer,ArrayList<String>>> row: tableData){
+        //decimate
+        ArrayList<SimpleEntry<Double, Map<Integer, ArrayList<String>>>> decimatedTableData= new ArrayList<>();
+        Map.Entry<Double, Map<Integer, ArrayList<String>>> entryToWrite = null;
+        Double lastEntryTimestamp=0.0;
+        for(Map.Entry<Double, Map<Integer, ArrayList<String>>> thisEntry : tableData.entrySet()){
+            if(entryToWrite!=null){
+                Map<Integer, ArrayList<String>> combinedValues = entryToWrite.getValue();
+                combinedValues.putAll(thisEntry.getValue()); //add new values to entrytowrite
+                thisEntry.setValue(combinedValues);
+                entryToWrite = thisEntry;
+            }else{
+                entryToWrite = thisEntry;
+            }
+
+            if(thisEntry.getKey()>(lastEntryTimestamp+decimationPeriod)){
+                decimatedTableData.add(new SimpleEntry<>((double)entryToWrite.getKey(),Map.copyOf(entryToWrite.getValue())));
+                lastEntryTimestamp = thisEntry.getKey(); 
+                if(fillBlanks){
+                    if(!fillMessageBlanks){
+                        try{
+                            Integer messageColumn = records.entrySet().stream().filter(entry ->entry.getValue().getKey().name.equals("messages")).map(Map.Entry::getKey).findFirst().get();
+                            entryToWrite.getValue().put(messageColumn,new ArrayList<String>());
+                        }catch (Exception e){}
+                    }
+                }else{
+                    entryToWrite = null;
+                }
+                
+            }
+        }
+
+        for(SimpleEntry<Double, Map<Integer,ArrayList<String>>> row: decimatedTableData){
             writer.write(String.valueOf(row.getKey())+",");
             for(int logEntryIdx=1;logEntryIdx<row.getValue().size()+1;logEntryIdx++){
                 ArrayList<String> thisColumnSetEntry = row.getValue().get(logEntryIdx);
