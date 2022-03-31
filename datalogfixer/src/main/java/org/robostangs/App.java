@@ -202,7 +202,18 @@ public final class App {
         for (Map.Entry<Double, Map<Integer, ArrayList<String>>> thisEntry : tableData.entrySet()) {
             if (entryToWrite != null) {
                 Map<Integer, ArrayList<String>> combinedValues = entryToWrite.getValue();
-                combinedValues.putAll(thisEntry.getValue()); // add new values to entrytowrite
+                for(Map.Entry<Integer, ArrayList<String>> entry: thisEntry.getValue().entrySet()){
+                    if(combinedValues.containsKey(entry.getKey()) && (combinedValues.get(entry.getKey()).size()>0) && (records.get(entry.getKey()).getKey().type.equals("string"))){
+                        String oldValue = combinedValues.get(entry.getKey()).get(0);
+                        String newValue = entry.getValue().get(0);
+                        entry.getValue().set(0, combinedValues.get(entry.getKey()).get(0) + ";" + entry.getValue().get(0));
+                        //newArr.add(oldValue +";"+newValue);
+                        combinedValues.put(entry.getKey(), entry.getValue());
+                    }else{
+                        combinedValues.put(entry.getKey(), entry.getValue());
+                    }
+                }
+                //combinedValues.putAll(thisEntry.getValue()); // add new values to entrytowrite
                 thisEntry.setValue(combinedValues);
                 entryToWrite = thisEntry;
             } else {
