@@ -3,6 +3,7 @@ package frc.LoggyThings;
 import java.util.ArrayList;
 import java.util.EnumSet;
 
+import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj.DriverStation;
 
@@ -15,7 +16,7 @@ public class LoggyThingManager {
     private long mUserMinGlobalLogPeriod = 0; // user set min period, not overwritten if disabled
 
     LoggyThingManager() {
-        System.out.println("Loggy Thing Manager Initialized");
+        System.out.println("Loggy Thing Manager V1.1 Initialized");
         DataLogManager.start();
         DriverStation.startDataLog(DataLogManager.getLog(), true);
     }
@@ -47,20 +48,29 @@ public class LoggyThingManager {
     }
 
     boolean justFailed = false;
-
+    long lastDisabledTime=0;
     // Call this from robot periodic, don't crash the robot
     public void periodic() {
         try {
             // Slow down logging if disabled
-            mMinGlobalLogPeriod = DriverStation.isEnabled() ? mUserMinGlobalLogPeriod : 10000000;
+            if(DriverStation.isEnabled()){
+                lastDisabledTime = WPIUtilJNI.getSystemTime();
+            }
+            mMinGlobalLogPeriod = ((WPIUtilJNI.getSystemTime()-10000000)<lastDisabledTime) ? mUserMinGlobalLogPeriod : 10000000;
+            //long startTime,endTime;
             for (ILoggyMotor iLoggyMotor : mMotorList) {
+                //startTime = WPIUtilJNI.getSystemTime();
                 iLoggyMotor.writeToLog();
+                //endTime = WPIUtilJNI.getSystemTime();
+                //if((startTime-endTime)>100){
+                //    DataLogManager.log(iLoggyMotor.getLogPath()+" "+(startTime-endTime));
+                //}
             }
             justFailed = false;
         } catch (Exception e) {
             if(!justFailed){
                 e.printStackTrace();
-                justFailed = true;
+                //justFailed = true;
             }
         }
 
