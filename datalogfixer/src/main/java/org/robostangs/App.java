@@ -11,6 +11,11 @@ import java.io.FileWriter;
 import java.io.FilenameFilter;
 import java.lang.reflect.Array;
 import java.text.DecimalFormat;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -18,6 +23,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import javax.security.auth.callback.TextInputCallback;
@@ -121,7 +127,17 @@ public final class App {
                 String outString = fixEntryValueString(inString);
                 thisDataAsString.add(outString.replace(",", ";"));
             } else if (thisHeading.type.equals("int64")) {
-                thisDataAsString.add(Long.toString(record.getInteger()));
+                long thisVal = record.getInteger();
+                String outString = "";
+                if(thisHeading.name.equals("systemTime")){
+                    outString = Instant.EPOCH.plus( 
+                        Duration.ofNanos( 
+                            TimeUnit.MICROSECONDS.toNanos( thisVal) ) ).atZone(ZoneId.of("America/Detroit")).format(DateTimeFormatter.ofPattern("hh:mm:ss.SSS a"));
+                }else{
+                    outString = Long.toString(thisVal);
+                }
+                
+                thisDataAsString.add(outString);
             } else if (thisHeading.type.equals("boolean")) {
                 thisDataAsString.add(record.getBoolean() ? "1" : "0");
             } else if (thisHeading.type.equals("double[]")) {
@@ -296,6 +312,12 @@ public final class App {
         stringMappings.put("axes[3]", "Right_Trigger");
         stringMappings.put("axes[4]", "Right_XAxis");
         stringMappings.put("axes[5]", "Right_YAxis");
+        stringMappings.put("Hand/9/FORWARD_LIMIT_SWITCH","Hand/9/HIT_BAR");
+        stringMappings.put("Hand/10/FORWARD_LIMIT_SWITCH","Hand/10/HIT_BAR");
+        stringMappings.put("Hand/9/REVERSE_LIMIT_SWITCH","Hand/9/CLAW_HOME");
+        stringMappings.put("Hand/10/REVERSE_LIMIT_SWITCH","Hand/10/CLAW_HOME");
+        stringMappings.put("Hand/9", "Hand B");
+        stringMappings.put("Hand/10", "Hand A");
     }
 
     public static String fixEntryValueString(String inString) {
