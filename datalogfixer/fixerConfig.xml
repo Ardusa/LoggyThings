@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<fixerConfig>
+<generalConfigs>
+    <outputUnconnectedData enable="false"/>
+    <outputConnectedData enable="true"/>
+</generalConfigs>
+<stringMappings>
+    <mapItem original="joystick0" replacement="Driver"/>
+    <mapItem original="joystick1" replacement="Manip"/>
+    <mapItem original="buttons[0]" replacement="Btn_A"/>
+    <mapItem original="buttons[1]" replacement="Btn_B"/>
+    <mapItem original="buttons[2]" replacement="Btn_X"/>
+    <mapItem original="buttons[3]" replacement="Btn_Y"/>
+    <mapItem original="buttons[4]" replacement="Btn_LBumper"/>
+    <mapItem original="buttons[5]" replacement="Btn_RBumper"/>
+    <mapItem original="buttons[6]" replacement="Btn_WindowButton"/>
+    <mapItem original="buttons[7]" replacement="Btn_MenuButton"/>
+    <mapItem original="buttons[8]" replacement="Btn_LStick"/>
+    <mapItem original="buttons[9]" replacement="Btn_RStick"/>
+    <mapItem original="axes[0]" replacement="Left_XAxis"/>
+    <mapItem original="axes[1]" replacement="Left_YAxis"/>
+    <mapItem original="axes[2]" replacement="Left_Trigger"/>
+    <mapItem original="axes[3]" replacement="Right_Trigger"/>
+    <mapItem original="axes[4]" replacement="Right_XAxis"/>
+    <mapItem original="axes[5]" replacement="Right_YAxis"/>
+    <mapItem original="Hand/9/FORWARD_LIMIT_SWITCH" replacement="Hand/9/HIT_BAR"/>
+    <mapItem original="Hand/10/FORWARD_LIMIT_SWITCH" replacement="Hand/10/HIT_BAR"/>
+    <mapItem original="Hand/9/REVERSE_LIMIT_SWITCH" replacement="Hand/9/CLAW_HOME"/>
+    <mapItem original="Hand/10/REVERSE_LIMIT_SWITCH" replacement="Hand/10/CLAW_HOME"/>
+    <mapItem original="Hand/9" replacement="Hand B"/>
+    <mapItem original="Hand/10" replacement="Hand A"/>
+</stringMappings>
+<outputFiles>
+    <outputFile name="Climber">
+        <columnNameRegex>joystick</columnNameRegex>
+        <columnNameRegex>Climber</columnNameRegex>
+    </outputFile>
+    <outputFile name="All">
+        <columnNameRegex>*</columnNameRegex>
+    </outputFile>
+</outputFiles>
+</fixerConfig>

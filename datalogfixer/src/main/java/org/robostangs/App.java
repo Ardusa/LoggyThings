@@ -9,6 +9,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.FilenameFilter;
+import java.io.IOException;
 import java.lang.reflect.Array;
 import java.text.DecimalFormat;
 import java.time.Duration;
@@ -30,6 +31,11 @@ import javax.security.auth.callback.TextInputCallback;
 import javax.swing.JCheckBox;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.parsers.SAXParser;
+import javax.xml.parsers.SAXParserFactory;
+
+import org.xml.sax.SAXException;
 
 import edu.wpi.first.util.datalog.DataLogReader;
 import edu.wpi.first.util.datalog.DataLogRecord;
@@ -41,13 +47,20 @@ public final class App {
     private App() {
     }
 
+    public static boolean outputUnconnectedData = false;
+    public static boolean outputConnectedData = true;
+    public static Map<String, String> stringMappings = new HashMap<>();
+    public static Map<String, ArrayList<String>> outputFiles = new HashMap<>();
     /**
      * Says hello to the world.
      * 
      * @param args The arguments of the program.
+     * @throws SAXException
+     * @throws ParserConfigurationException
+     * @throws IOException
      */
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws ParserConfigurationException, SAXException {
         double decimationPeriod = 0.02;
         boolean fillBlanks = true;
         boolean fillMessagesBlanks = false;
@@ -65,12 +78,23 @@ public final class App {
 
         File folder = new File(System.getProperty("user.dir"));
         System.out.println("Looking in " + System.getProperty("user.dir"));
+        try {
+            File configFile = new File("fixerConfig.xml");
+            SAXParser parser = SAXParserFactory.newInstance().newSAXParser();
+            parser.parse(configFile, new SAXHandler());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+            
+
         for (File file : folder.listFiles(((dir, name) -> {
             return name.endsWith(".wpilog") && name.startsWith("FRC");
         }))) {
             try {
-                processFile(file, folder, "FIXED2_", decimationPeriod, false, false);
-                processFile(file, folder, "FIXED2_CONNECTED_", decimationPeriod, true, fillMessagesBlanks);
+                if(outputUnconnectedData)
+                    processFile(file, folder, "FIXED2_", decimationPeriod, false, false);
+                if(outputConnectedData)
+                    processFile(file, folder, "FIXED2_CONNECTED_", decimationPeriod, true, fillMessagesBlanks);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -289,35 +313,6 @@ public final class App {
         System.out.println("Writeout Done");
         writer.flush();
         writer.close();
-    }
-
-    public static final Map<String, String> stringMappings;
-    static {
-        stringMappings = new HashMap<>();
-        stringMappings.put("joystick0", "Driver");
-        stringMappings.put("joystick1", "Manip");
-        stringMappings.put("buttons[0]", "Btn_A");
-        stringMappings.put("buttons[1]", "Btn_B");
-        stringMappings.put("buttons[2]", "Btn_X");
-        stringMappings.put("buttons[3]", "Btn_Y");
-        stringMappings.put("buttons[4]", "Btn_LBumper");
-        stringMappings.put("buttons[5]", "Btn_RBumper");
-        stringMappings.put("buttons[6]", "Btn_WindowButton");
-        stringMappings.put("buttons[7]", "Btn_MenuButton");
-        stringMappings.put("buttons[8]", "Btn_LStick");
-        stringMappings.put("buttons[9]", "Btn_RStick");
-        stringMappings.put("axes[0]", "Left_XAxis");
-        stringMappings.put("axes[1]", "Left_YAxis");
-        stringMappings.put("axes[2]", "Left_Trigger");
-        stringMappings.put("axes[3]", "Right_Trigger");
-        stringMappings.put("axes[4]", "Right_XAxis");
-        stringMappings.put("axes[5]", "Right_YAxis");
-        stringMappings.put("Hand/9/FORWARD_LIMIT_SWITCH","Hand/9/HIT_BAR");
-        stringMappings.put("Hand/10/FORWARD_LIMIT_SWITCH","Hand/10/HIT_BAR");
-        stringMappings.put("Hand/9/REVERSE_LIMIT_SWITCH","Hand/9/CLAW_HOME");
-        stringMappings.put("Hand/10/REVERSE_LIMIT_SWITCH","Hand/10/CLAW_HOME");
-        stringMappings.put("Hand/9", "Hand B");
-        stringMappings.put("Hand/10", "Hand A");
     }
 
     public static String fixEntryValueString(String inString) {
