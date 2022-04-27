@@ -1,14 +1,8 @@
 package org.robostangs;
 
-import java.awt.Component;
-import java.awt.TrayIcon.MessageType;
-import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.lang.reflect.Array;
 import java.text.DecimalFormat;
@@ -16,7 +10,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -25,12 +18,8 @@ import java.util.Optional;
 import java.util.TreeMap;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
-import javax.security.auth.callback.TextInputCallback;
-import javax.swing.JCheckBox;
-import javax.swing.JOptionPane;
-import javax.swing.JTextField;
 import javax.xml.parsers.ParserConfigurationException;
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
@@ -51,6 +40,7 @@ public final class App {
     public static boolean outputConnectedData = true;
     public static Map<String, String> stringMappings = new HashMap<>();
     public static Map<String, ArrayList<String>> outputFiles = new HashMap<>();
+
     /**
      * Says hello to the world.
      * 
@@ -62,19 +52,7 @@ public final class App {
 
     public static void main(String[] args) throws ParserConfigurationException, SAXException {
         double decimationPeriod = 0.02;
-        boolean fillBlanks = true;
         boolean fillMessagesBlanks = false;
-        // JTextField decimationField = new
-        // JTextField(String.valueOf(decimationPeriod));
-        // // JCheckBox fillBlanksField = new JCheckBox("Fill blanks?",fillBlanks);
-        // JCheckBox fillMessagesBlanksField = new JCheckBox("...Even Messages?",
-        // fillMessagesBlanks);
-        // Object[] options = { fillMessagesBlanksField, "Decimation period:" };
-        // decimationPeriod = Double.valueOf(JOptionPane.showInputDialog((Component)
-        // null, options,
-        // "Configure Output File", JOptionPane.QUESTION_MESSAGE));
-        // //fillBlanks = ((JCheckBox) (options[0])).isSelected();
-        // fillMessagesBlanks = ((JCheckBox) (options[0])).isSelected();
 
         File folder = new File(System.getProperty("user.dir"));
         System.out.println("Looking in " + System.getProperty("user.dir"));
@@ -85,15 +63,14 @@ public final class App {
         } catch (IOException e) {
             e.printStackTrace();
         }
-            
 
         for (File file : folder.listFiles(((dir, name) -> {
             return name.endsWith(".wpilog") && name.startsWith("FRC");
         }))) {
             try {
-                if(outputUnconnectedData)
+                if (outputUnconnectedData)
                     processFile(file, folder, "FIXED2_", decimationPeriod, false, false);
-                if(outputConnectedData)
+                if (outputConnectedData)
                     processFile(file, folder, "FIXED2_CONNECTED_", decimationPeriod, true, fillMessagesBlanks);
             } catch (Exception e) {
                 e.printStackTrace();
@@ -106,12 +83,11 @@ public final class App {
         String outfilename = prefix + thisFile.getName().replace("wpilog", "csv");
         for (File maybeDupFile : thisFolder.listFiles()) {
             if (maybeDupFile.getName().equals(outfilename)) {
-                System.out.println("File " + outfilename + " already exists. Skipping.");
+                System.out.println(
+                        "File " + outfilename + " already exists. Skipping. Delete main file to generate sub-files");
                 return;
             }
         }
-        FileWriter unbwriter = new FileWriter(outfilename, false);
-        BufferedWriter writer = new BufferedWriter(unbwriter, 10000000);
         DataLogReader reader = new DataLogReader(thisFile.getName());
         if (!reader.isValid()) {
             System.err.println("File " + thisFile.getName() + " is invalid");
@@ -153,14 +129,15 @@ public final class App {
             } else if (thisHeading.type.equals("int64")) {
                 long thisVal = record.getInteger();
                 String outString = "";
-                if(thisHeading.name.equals("systemTime")){
-                    outString = Instant.EPOCH.plus( 
-                        Duration.ofNanos( 
-                            TimeUnit.MICROSECONDS.toNanos( thisVal) ) ).atZone(ZoneId.of("America/Detroit")).format(DateTimeFormatter.ofPattern("hh:mm:ss.SSS a"));
-                }else{
+                if (thisHeading.name.equals("systemTime")) {
+                    outString = Instant.EPOCH.plus(
+                            Duration.ofNanos(
+                                    TimeUnit.MICROSECONDS.toNanos(thisVal)))
+                            .atZone(ZoneId.of("America/Detroit")).format(DateTimeFormatter.ofPattern("hh:mm:ss.SSS a"));
+                } else {
                     outString = Long.toString(thisVal);
                 }
-                
+
                 thisDataAsString.add(outString);
             } else if (thisHeading.type.equals("boolean")) {
                 thisDataAsString.add(record.getBoolean() ? "1" : "0");
@@ -213,26 +190,6 @@ public final class App {
         }
         System.out.println("Read through file");
 
-        writer.write("Timestamp,");
-        for (SimpleEntry<DataLogRecord.StartRecordData, Integer> recordItem : new ArrayList<>(records.values())) {
-            Integer thisEntryArrSize = recordItem.getValue();
-            String thisEntryName = recordItem.getKey().name;
-            for (int i = 0; i < thisEntryArrSize; i++) {
-                String printColumnName = thisEntryName;
-                if (thisEntryArrSize > 1) {
-                    printColumnName = printColumnName + "[" + i + "]";
-                }
-                for (Map.Entry<String, String> potentialMatch : stringMappings.entrySet()) {
-                    if (printColumnName.contains(potentialMatch.getKey())) {
-                        printColumnName = printColumnName.replace(potentialMatch.getKey(), potentialMatch.getValue());
-                    }
-                }
-                writer.write(printColumnName + ",");
-            }
-        }
-        writer.write("\n");
-        writer.flush();
-        System.out.println("Print column names set");
         // decimate
         ArrayList<SimpleEntry<Double, Map<Integer, ArrayList<String>>>> decimatedTableData = new ArrayList<>();
         Map.Entry<Double, Map<Integer, ArrayList<String>>> entryToWrite = null;
@@ -242,18 +199,21 @@ public final class App {
         for (Map.Entry<Double, Map<Integer, ArrayList<String>>> thisEntry : tableData.entrySet()) {
             if (entryToWrite != null) {
                 Map<Integer, ArrayList<String>> combinedValues = entryToWrite.getValue();
-                for(Map.Entry<Integer, ArrayList<String>> entry: thisEntry.getValue().entrySet()){
-                    if(combinedValues.containsKey(entry.getKey()) && (combinedValues.get(entry.getKey()).size()>0) && (records.get(entry.getKey()).getKey().type.equals("string"))){
+                for (Map.Entry<Integer, ArrayList<String>> entry : thisEntry.getValue().entrySet()) {
+                    if (combinedValues.containsKey(entry.getKey()) && (combinedValues.get(entry.getKey()).size() > 0)
+                            && (records.get(entry.getKey()).getKey().type.equals("string"))) {
                         String oldValue = combinedValues.get(entry.getKey()).get(0);
                         String newValue = entry.getValue().get(0);
-                        entry.getValue().set(0, combinedValues.get(entry.getKey()).get(0) + ";" + entry.getValue().get(0));
-                        //newArr.add(oldValue +";"+newValue);
+                        entry.getValue().set(0,
+                                combinedValues.get(entry.getKey()).get(0) + ";" + entry.getValue().get(0));
+                        // newArr.add(oldValue +";"+newValue);
                         combinedValues.put(entry.getKey(), entry.getValue());
-                    }else{
+                    } else {
                         combinedValues.put(entry.getKey(), entry.getValue());
                     }
                 }
-                //combinedValues.putAll(thisEntry.getValue()); // add new values to entrytowrite
+                // combinedValues.putAll(thisEntry.getValue()); // add new values to
+                // entrytowrite
                 thisEntry.setValue(combinedValues);
                 entryToWrite = thisEntry;
             } else {
@@ -284,14 +244,70 @@ public final class App {
             }
         }
         System.out.println("Decimation done");
+        for (Map.Entry<String, ArrayList<String>> fileFormat : App.outputFiles.entrySet()) {
+            writeToFile(outfilename, fileFormat.getKey(), String.join("|", fileFormat.getValue()), records,
+                    decimatedTableData);
+        }
+    }
 
+    private static void writeToFile(String outfilename, String outfileFolder, String regexString,
+            Map<Integer, SimpleEntry<DataLogRecord.StartRecordData, Integer>> records,
+            ArrayList<SimpleEntry<Double, Map<Integer, ArrayList<String>>>> decimatedTableData) throws IOException {
+        Pattern regex = Pattern.compile(regexString, Pattern.CASE_INSENSITIVE);
+        String targetFileRelativePath = outfileFolder + ((outfileFolder.equals("") ? "" : File.separator)) + outfilename;
+        File targetFile = new File(targetFileRelativePath);
+        if (!outfileFolder.equals("")) {
+            File parentDir = targetFile.getParentFile();
+            if (parentDir == null || !parentDir.exists()) {
+                parentDir.mkdirs();
+            }
+        }
+        if(targetFile.exists()){
+            System.out.println("File "+targetFileRelativePath+" already exists. Skipping");
+            return;
+        }
+        FileWriter unbwriter = new FileWriter(
+                targetFile, false);
+        BufferedWriter writer = new BufferedWriter(unbwriter, 10000000);
+        writer.write("Timestamp,");
+        for (SimpleEntry<DataLogRecord.StartRecordData, Integer> recordItem : new ArrayList<>(records.values())) {
+
+            Integer thisEntryArrSize = recordItem.getValue();
+            String thisEntryName = recordItem.getKey().name;
+            for (int i = 0; i < thisEntryArrSize; i++) {
+                String printColumnName = thisEntryName;
+                if (thisEntryArrSize > 1) {
+                    printColumnName = printColumnName + "[" + i + "]";
+                }
+                for (Map.Entry<String, String> potentialMatch : stringMappings.entrySet()) {
+                    if (printColumnName.contains(potentialMatch.getKey())) {
+                        printColumnName = printColumnName.replace(potentialMatch.getKey(), potentialMatch.getValue());
+                    }
+                }
+                if (regex.matcher(printColumnName).find())//TODO no work
+                    writer.write(printColumnName + ",");// allowed per regex
+            }
+        }
+        writer.write("\n");
+        writer.flush();
+        System.out.println("Print column names set");
+
+        int numEntriesDone;
+        Double lastPercentShown;
         numEntriesDone = 0;
         lastPercentShown = 0.0;
+        Map<Integer, Boolean> skippedColumns = new TreeMap<>();
         for (SimpleEntry<Double, Map<Integer, ArrayList<String>>> row : decimatedTableData) {
             StringBuilder builder = new StringBuilder(row.getKey() + ",");
             for (int logEntryIdx = 1; logEntryIdx < row.getValue().size() + 1; logEntryIdx++) {
                 ArrayList<String> thisColumnSetEntry = row.getValue().get(logEntryIdx);
                 SimpleEntry<DataLogRecord.StartRecordData, Integer> headingItem = records.get(logEntryIdx);
+                if (!skippedColumns.containsKey(logEntryIdx)){
+                    skippedColumns.put(logEntryIdx,!regex.matcher(headingItem.getKey().name).find());
+                }
+                if(skippedColumns.get(logEntryIdx))
+                    continue;//not in regex
+
                 for (int arrayIdx = 0; arrayIdx < headingItem.getValue(); arrayIdx++) {
                     // For each spot in the heading list
                     if (thisColumnSetEntry != null) {

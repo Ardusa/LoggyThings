@@ -1,9 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <fixerConfig>
+
+<!-- General settings-->
 <generalConfigs>
     <outputUnconnectedData enable="false"/>
     <outputConnectedData enable="true"/>
 </generalConfigs>
+
+<!-- Replace text in column names. Evaluated in the order shown here. So Hand/9/FORWARD_LIMIT_SWITCH is replaced with Hand/9/HIT_BAR then with Hand B/HIT_BAR-->
 <stringMappings>
     <mapItem original="joystick0" replacement="Driver"/>
     <mapItem original="joystick1" replacement="Manip"/>
@@ -30,13 +34,16 @@
     <mapItem original="Hand/9" replacement="Hand B"/>
     <mapItem original="Hand/10" replacement="Hand A"/>
 </stringMappings>
+
+<!-- Create filtered output files. Filter is applied to column manes AFTER stringMappings-->
 <outputFiles>
-    <outputFile name="Climber">
-        <columnNameRegex>joystick</columnNameRegex>
+    <outputFile name="Climber"> <!-- Name of folder for files containing only columns matching the below regex (can include path separators)-->
+        <columnNameRegex>Driver|Manip</columnNameRegex>
         <columnNameRegex>Climber</columnNameRegex>
+        <columnNameRegex>messages</columnNameRegex>
     </outputFile>
-    <outputFile name="All">
-        <columnNameRegex>*</columnNameRegex>
+    <outputFile name=""><!-- Leave this here to generate default files-->
+        <columnNameRegex>.*</columnNameRegex> <!-- anything-->
     </outputFile>
 </outputFiles>
 </fixerConfig>
