@@ -44,6 +44,11 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
     }
 
     @Override
+    public long getMinimumLogPeriod() {
+        return mLogPeriod;
+    }
+
+    @Override
     public void setLogLevel_internal(EnumSet<LogItem> logLevel) {
         mLogLevel = logLevel;
     }
@@ -78,9 +83,6 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
                     case OUTPUT_PERCENT:
                         thisEntry.logDoubleIfChanged(getAppliedOutput(), now);
                         break;
-                    case FAULTS:
-                        thisEntry.logStringIfChanged(String.valueOf(getFaults()), now);
-                        break;
                     case FORWARD_LIMIT_SWITCH:
                         thisEntry.logBooleanIfChanged(getForwardLimitSwitch(Type.kNormallyOpen).isPressed(), now);
                         break;
@@ -105,17 +107,11 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
                     case TEMPERATURE:
                         thisEntry.logDoubleIfChanged(getMotorTemperature(), now);
                         break;
-                    case INTEGRATED_SENSOR_ABSOLUTE_POSITION:
-                        // not supported
-                        break;
                     case HAS_RESET:
                         // not supported
                         break;
                     case CLOSED_LOOP_ERROR:
                         // not supported
-                        break;
-                    case INTEGRAL_ACCUMULATOR:
-                        thisEntry.logDoubleIfChanged(getPIDController().getIAccum(), now);
                         break;
                     case ERROR_DERIVATIVE:
                         // not supported
@@ -212,5 +208,10 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
             }
         }
         return super.setIdleMode(mode);
+    }
+
+    @Override
+    public long getLastLogTime() {
+        return lastLogTime;
     }
 }
