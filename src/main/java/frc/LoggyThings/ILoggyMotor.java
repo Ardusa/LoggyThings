@@ -114,8 +114,8 @@ public interface ILoggyMotor {
         // Default logging
         SET_FUNCTION_CONTROL_MODE(LogItemType.STRING),
         SET_FUNCTION_VALUE,
-        SET_FUNCTION_DEMAND_TYPE(LogItemType.STRING),
-        SET_FUNCTION_DEMAND,
+        // SET_FUNCTION_DEMAND_TYPE(LogItemType.STRING),
+        // SET_FUNCTION_DEMAND,
         SET_VOLTAGE,
         SET_SELECTED_SENSOR_POSITION,
         SET_NEUTRAL_MODE_IS_BRAKE(LogItemType.BOOLEAN),
@@ -164,7 +164,7 @@ public interface ILoggyMotor {
 
         // Log items in this set are event-driven by set function calls, not periodic
         public static final EnumSet<LogItem> SET_FUNCTION_CALLS = EnumSet.of(SET_FUNCTION_CONTROL_MODE,
-                SET_FUNCTION_VALUE, SET_FUNCTION_DEMAND_TYPE, SET_FUNCTION_DEMAND, SET_VOLTAGE,
+                SET_FUNCTION_VALUE, SET_VOLTAGE,
                 SET_SELECTED_SENSOR_POSITION, SET_NEUTRAL_MODE_IS_BRAKE);
 
         public static final EnumSet<LogItem> LOGLEVEL_NONE = EnumSet.noneOf(LogItem.class);
@@ -173,7 +173,7 @@ public interface ILoggyMotor {
         public static final EnumSet<LogItem> LOGLEVEL_MINIMAL = EnumSet.of(OUTPUT_PERCENT, BUS_VOLTAGE);
 
         private static final EnumSet<LogItem> DEFAULT_LOG_ADDITIONS = EnumSet.of(SET_FUNCTION_CONTROL_MODE,
-                SET_FUNCTION_VALUE, SET_FUNCTION_DEMAND_TYPE, SET_FUNCTION_DEMAND, SET_VOLTAGE,
+                SET_FUNCTION_VALUE, SET_VOLTAGE,
                 SET_SELECTED_SENSOR_POSITION, SET_NEUTRAL_MODE_IS_BRAKE, FORWARD_LIMIT_SWITCH,
                 REVERSE_LIMIT_SWITCH, SELECTED_SENSOR_POSITION, SELECTED_SENSOR_VELOCITY,
                 STATOR_CURRENT, SUPPLY_CURRENT, TEMPERATURE, HAS_RESET);

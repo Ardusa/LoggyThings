@@ -6,6 +6,7 @@ import java.util.HashMap;
 import com.ctre.phoenix6.StatusCode;
 import com.ctre.phoenix6.configs.Slot1Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
+import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.ControlModeValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
@@ -152,20 +153,12 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                     case TEMPERATURE:
                         thisEntry.logDoubleIfChanged(getDeviceTemp().getValue(), now);
                         break;
-                    // case INTEGRATED_SENSOR_ABSOLUTE_POSITION:
-                    // thisEntry.logDoubleIfChanged(getSensorCollection().getIntegratedSensorAbsolutePosition(),
-                    // now);
-                    // // thisEntry.logDoubleIfChanged(getForwardLimit().getValue().value, now);
-                    // break;
                     case HAS_RESET:
                         thisEntry.logBooleanIfChanged(hasResetOccurred(), now);
                         break;
                     case CLOSED_LOOP_ERROR:
                         thisEntry.logDoubleIfChanged(getClosedLoopError().getValue(), now);
                         break;
-                    // case INTEGRAL_ACCUMULATOR:
-                    // thisEntry.logDoubleIfChanged(getIntegralAccumulator(), now);
-                    // break;
                     case ERROR_DERIVATIVE:
                         thisEntry.logDoubleIfChanged(getDifferentialClosedLoopDerivativeOutput().getValue(), now);
                         break;
@@ -189,17 +182,12 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
         }
     }
 
-    // set function calls
-    // @Override
-    // public void set(double speed) {
-    // }
-
     boolean justFailed = false;
 
     /**
      * PercentOut replacement.
      * Just enter a speed (double) and the motor will use
-     * {@link ControlModeValue.DutyCycleOut}
+     * {@link ControlModeValue#DutyCycleOut}
      */
     @Override
     public void set(double speed) {
@@ -220,27 +208,62 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                     case SET_FUNCTION_CONTROL_MODE:
                         thisEntry.logStringIfChanged(getControlMode().toString(), now);
                         break;
-                    // case SET_FUNCTION_VALUE:
-                    // thisEntry.logDoubleIfChanged(, now);
-                    // break;
-                    // case SET_FUNCTION_DEMAND_TYPE:
-                    // thisEntry.logStringIfChanged(.toString(), now);
-                    // break;
-                    // case SET_FUNCTION_DEMAND:
-                    // thisEntry.logDoubleIfChanged(demand1, now);
+                    case SET_FUNCTION_VALUE:
+                        thisEntry.logDoubleIfChanged(get(), now);
+                        break;
                     default:
                         break;
                 }
             }
             justFailed = false;
         } catch (Exception e) {
-            if (!justFailed) {// don't spam log
+            if (!justFailed) {
                 e.printStackTrace();
                 justFailed = true;
             }
         }
-
     }
+
+    @Override
+    public StatusCode setControl(ControlRequest request) {
+
+        if (super.setControl(request) != StatusCode.OK) {
+            return StatusCode.GeneralError;
+        }
+
+        try {// Don't jeopardize robot functionality
+            // Filter the 4 potential log items down to the ones allowed here
+            EnumSet<LogItem> potentialLogItems = EnumSet.of(LogItem.SET_FUNCTION_CONTROL_MODE);
+            potentialLogItems.retainAll(mDataLogEntries.keySet());
+            potentialLogItems.retainAll(LoggyThingManager.getInstance().getGlobalMaxLogLevel());
+            long now = WPIUtilJNI.now();
+            for (LogItem thisLogItem : potentialLogItems) {
+                DataLogEntryWithHistory thisEntry = mDataLogEntries.get(thisLogItem);
+
+                switch (thisLogItem) {
+                    case SET_FUNCTION_CONTROL_MODE:
+                        thisEntry.logStringIfChanged(getControlMode().getValue().toString(), now);
+                        break;
+                    case SET_FUNCTION_VALUE:
+                        thisEntry.logDoubleIfChanged(get(), now);
+                        break;
+                    default:
+                        break;
+                }
+            }
+            justFailed = false;
+        } catch (Exception e) {
+            if (!justFailed) {
+                e.printStackTrace();
+                justFailed = true;
+                return StatusCode.GeneralError;
+            }
+        }
+        return StatusCode.OK;
+    }
+
+    // @Override
+    // public StatusCode
 
     /**
      * configureSlot 0
@@ -249,16 +272,6 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
      * @return StatusCode
      */
     public StatusCode setMotionProfile(TalonFXConfiguration config) {
-        // if (slot == 0) {
-        // Slot0Configs configSlot = config.Slot0;
-        // } else if (slot == 1) {
-        // Slot1Configs configSlot = config.Slot1;
-        // } else if (slot == 2) {
-        // Slot2Configs configSlot = config.Slot2;
-        // } else {
-        // return StatusCode.InvalidTask;
-        // SlotConfigs configSlot = new SlotConfigs();
-        // }
         Slot1Configs configSlot = config.Slot1;
         configSlot.kS = 0.25;
         configSlot.kV = 0.12;
@@ -272,44 +285,6 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
 
         return super.getConfigurator().apply(config);
     }
-
-    // public SlotConfigs getSlot(int slot) {
-    // if (slot == 0) {
-    // return super.().getSlot0();
-    // } else if (slot == 1) {
-    // return super.getConfigurator().getSlot1();
-    // } else if (slot == 2) {
-    // return super.getConfigurator().getSlot2();
-    // } else if (slot == 3) {
-    // return super.getConfigurator().getSlot3();
-    // } else {
-    // return null;
-    // }
-    // }
-
-    // // @Override
-    // public StatusCode startMotionProfile(BufferedTrajectoryPointStream stream,
-    // int minBufferedPts, ControlModeValue motionProfControlMode){
-    // // StatusCode rc = super.
-    // StatusCode rc = super.startMotionProfile(stream, minBufferedPts,
-    // motionProfControlMode);
-    // try {// Don't jeopardize robot functionality
-
-    // if(mDataLogEntries.keySet().contains(LogItem.SET_FUNCTION_CONTROL_MODE) &&
-    // LoggyThingManager.getInstance().getGlobalMaxLogLevel().contains(LogItem.SET_FUNCTION_CONTROL_MODE)){
-    // long now = WPIUtilJNI.now();
-    // mDataLogEntries.get(LogItem.SET_FUNCTION_CONTROL_MODE).logStringIfChanged(motionProfControlMode.toString(),
-    // now);
-    // justFailed = false;
-    // }
-    // } catch (Exception e) {
-    // if (!justFailed) {// don't spam log
-    // e.printStackTrace();
-    // justFailed = true;
-    // }
-    // }
-    // return rc;
-    // }
 
     @Override
     public void setVoltage(double outputVolts) {
@@ -344,13 +319,12 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                 justFailed = false;
             }
         } catch (Exception e) {
-            if (!justFailed) {// don't spam log
+            if (!justFailed) {
                 e.printStackTrace();
                 justFailed = true;
             }
         }
         return super.setPosition(newValue, timeoutSeconds);
-        // return super.setSelectedSensorPosition(sensorPos, pidIdx, timeoutMs);
     }
 
     @Override
@@ -364,7 +338,7 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                 justFailed = false;
             }
         } catch (Exception e) {
-            if (!justFailed) {// don't spam log
+            if (!justFailed) {
                 e.printStackTrace();
                 justFailed = true;
             }
