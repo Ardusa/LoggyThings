@@ -17,6 +17,7 @@ import edu.wpi.first.util.WPIUtilJNI;
  * A {@link TalonFX} intizialized using {@link ILoggyMotor}
  */
 public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
+    
     private EnumSet<ILoggyMotor.LogItem> mLogLevel = EnumSet.noneOf(ILoggyMotor.LogItem.class);
     private HashMap<LogItem, DataLogEntryWithHistory> mDataLogEntries = new HashMap<LogItem, DataLogEntryWithHistory>();
     private long mLogPeriod = 100000;
@@ -37,7 +38,6 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
         mLogPath = logPath;
         setLogLevel(logLevel);
         LoggyThingManager.getInstance().registerLoggyMotor(this);
-        super.stopMotor();
     }
 
     /**
@@ -136,10 +136,10 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                         thisEntry.logBooleanIfChanged(getReverseLimit().getValue().value == 0, now);
                         break;
                     case SELECTED_SENSOR_POSITION:
-                        thisEntry.logDoubleIfChanged(getPosition().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getRotorPosition().getValue(), now);
                         break;
                     case SELECTED_SENSOR_VELOCITY:
-                        thisEntry.logDoubleIfChanged(getVelocity().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getRotorVelocity().getValue(), now);
                         break;
                     case STATOR_CURRENT:
                         thisEntry.logDoubleIfChanged(getStatorCurrent().getValue(), now);
@@ -159,9 +159,6 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                     case CLOSED_LOOP_ERROR:
                         thisEntry.logDoubleIfChanged(getClosedLoopError().getValue(), now);
                         break;
-                    case ERROR_DERIVATIVE:
-                        thisEntry.logDoubleIfChanged(getDifferentialClosedLoopDerivativeOutput().getValue(), now);
-                        break;
                     case CLOSED_LOOP_TARGET:
                         thisEntry.logDoubleIfChanged(getClosedLoopReference().getValue(), now);
                         break;
@@ -169,10 +166,10 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                         thisEntry.logDoubleIfChanged(getMotorVoltage().getValue(), now);
                         break;
                     case INTEGRATED_SENSOR_POSITION:
-                        thisEntry.logDoubleIfChanged(getRotorPosition().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getPosition().getValue(), now);
                         break;
                     case INTEGRATED_SENSOR_VELOCITY:
-                        thisEntry.logDoubleIfChanged(getRotorVelocity().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getVelocity().getValue(), now);
                         break;
                     default:
                         break;

@@ -10,6 +10,7 @@ import edu.wpi.first.wpilibj.DriverStation;
  * The class that manages LoggyThings
  */
 public class LoggyThingManager {
+    
     private static LoggyThingManager instance = null;
     private ArrayList<ILoggyMotor> mMotorList = new ArrayList<ILoggyMotor>();
     private EnumSet<ILoggyMotor.LogItem> mGlobalMaxLogLevel = ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING;

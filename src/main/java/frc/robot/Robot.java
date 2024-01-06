@@ -44,7 +44,8 @@ public class Robot extends TimedRobot {
     if (stick.getX() > 0.1) {
       falcon.set(stick.getX());
     } else
-      falcon.set(new PositionDutyCycle(Timer.getFPGATimestamp()).Position);
+      /* Will run the motor in a clockwise motion because the time slowly increases per each period */
+      falcon.setControl(new PositionDutyCycle(Timer.getFPGATimestamp()));
     spark.set(stick.getY());
     falcon2.set(Math.sin(Timer.getFPGATimestamp()));
     falcon3.set(Math.cos(Timer.getFPGATimestamp()));

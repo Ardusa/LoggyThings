@@ -114,16 +114,13 @@ public interface ILoggyMotor {
         // Default logging
         SET_FUNCTION_CONTROL_MODE(LogItemType.STRING),
         SET_FUNCTION_VALUE,
-        // SET_FUNCTION_DEMAND_TYPE(LogItemType.STRING),
-        // SET_FUNCTION_DEMAND,
         SET_VOLTAGE,
         SET_SELECTED_SENSOR_POSITION,
         SET_NEUTRAL_MODE_IS_BRAKE(LogItemType.BOOLEAN),
         // TODO soft limits
 
         // CTRE status frame 1
-        OUTPUT_PERCENT, // applied output
-        // FAULTS(LogItemType.STRING),
+        OUTPUT_PERCENT,
         FORWARD_LIMIT_SWITCH(LogItemType.BOOLEAN),
         REVERSE_LIMIT_SWITCH(LogItemType.BOOLEAN),
 
@@ -140,18 +137,19 @@ public interface ILoggyMotor {
 
         // CTRE status frame 21
         TEMPERATURE,
-        // INTEGRATED_SENSOR_ABSOLUTE_POSITION,
 
         HAS_RESET(LogItemType.BOOLEAN),
 
         // Extras for PID logging
+
         // CTRE status 13
         CLOSED_LOOP_ERROR,
         // INTEGRAL_ACCUMULATOR,
-        ERROR_DERIVATIVE,
+        // ERROR_DERIVATIVE,
         CLOSED_LOOP_TARGET,
 
         // Everything only
+        
         // CTRE status frame 1
         OUTPUT_VOLTAGE,
 
@@ -181,7 +179,7 @@ public interface ILoggyMotor {
         public static final EnumSet<LogItem> LOGLEVEL_DEFAULT;
 
         protected static final EnumSet<LogItem> PID_LOG_ADDITIONS = EnumSet.of(CLOSED_LOOP_ERROR,
-                ERROR_DERIVATIVE, CLOSED_LOOP_TARGET);
+                CLOSED_LOOP_TARGET);
 
         public static final EnumSet<LogItem> LOGLEVEL_PID;
 
