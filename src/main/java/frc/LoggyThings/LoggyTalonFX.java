@@ -4,20 +4,25 @@ import java.util.EnumSet;
 import java.util.HashMap;
 
 import com.ctre.phoenix6.StatusCode;
+import com.ctre.phoenix6.configs.Slot0Configs;
 import com.ctre.phoenix6.configs.Slot1Configs;
+import com.ctre.phoenix6.configs.Slot2Configs;
 import com.ctre.phoenix6.configs.TalonFXConfiguration;
 import com.ctre.phoenix6.controls.ControlRequest;
 import com.ctre.phoenix6.hardware.TalonFX;
 import com.ctre.phoenix6.signals.ControlModeValue;
+import com.ctre.phoenix6.signals.ForwardLimitValue;
 import com.ctre.phoenix6.signals.NeutralModeValue;
+import com.ctre.phoenix6.signals.ReverseLimitValue;
 
 import edu.wpi.first.util.WPIUtilJNI;
+import edu.wpi.first.wpilibj.DutyCycle;
 
 /**
  * A {@link TalonFX} intizialized using {@link ILoggyMotor}
  */
 public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
-    
+
     private EnumSet<ILoggyMotor.LogItem> mLogLevel = EnumSet.noneOf(ILoggyMotor.LogItem.class);
     private HashMap<LogItem, DataLogEntryWithHistory> mDataLogEntries = new HashMap<LogItem, DataLogEntryWithHistory>();
     private long mLogPeriod = 100000;
@@ -33,12 +38,12 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
      * @param logPath      String path of log file
      * @param logLevel     see {@link ILoggyMotor.LogItem}
      */
-    public LoggyTalonFX(int deviceNumber, String logPath, String canbus, EnumSet<ILoggyMotor.LogItem> logLevel) {
-        super(deviceNumber, canbus);// actually make motor controller
+    private LoggyTalonFX(int deviceNumber, String logPath, String canbus, EnumSet<ILoggyMotor.LogItem> logLevel) {
+        super(deviceNumber, canbus);
         mLogPath = logPath;
         setLogLevel(logLevel);
         LoggyThingManager.getInstance().registerLoggyMotor(this);
-    }
+    } /* Does not work with 2 CANivores, only 1 */
 
     /**
      * Constructs a new LoggyTalonFX and registers it with
@@ -47,9 +52,11 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
      * @param deviceNumber CAN id
      * @param logPath      String path of log file
      * @param logLevel     see {@link ILoggyMotor.LogItem}
+     * @param CANivore     if motor is on a CANivore, set to true
      */
-    public LoggyTalonFX(int deviceNumber, String logPath, EnumSet<ILoggyMotor.LogItem> logLevel) {
-        this(deviceNumber, logPath, "", logLevel);
+    public LoggyTalonFX(int deviceNumber, String logPath, EnumSet<ILoggyMotor.LogItem> logLevel, boolean CANivore) {
+
+        this(deviceNumber, logPath, CANivore ? "*" : "", logLevel);
     }
 
     /**
@@ -59,8 +66,8 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
      * @param deviceNumber CAN id
      * @param logPath      String path of log file
      */
-    public LoggyTalonFX(int deviceNumber, String logPath) {
-        this(deviceNumber, logPath, "", ILoggyMotor.LogItem.LOGLEVEL_DEFAULT);
+    public LoggyTalonFX(int deviceNumber, String logPath, boolean CANivore) {
+        this(deviceNumber, logPath, CANivore ? "*" : "", ILoggyMotor.LogItem.LOGLEVEL_DEFAULT);
     }
 
     /**
@@ -69,8 +76,10 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
      * 
      * @param deviceNumber CAN id
      */
-    public LoggyTalonFX(int deviceNumber) {
-        this(deviceNumber, "/loggyMotors/" + String.valueOf(deviceNumber) + "/", "",
+    public LoggyTalonFX(int deviceNumber, boolean CANivore) {
+        this(
+                deviceNumber, "/loggyMotors/" + String.valueOf(deviceNumber) + "/",
+                CANivore ? "*" : "",
                 ILoggyMotor.LogItem.LOGLEVEL_DEFAULT);
     }
 
@@ -130,16 +139,18 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                         thisEntry.logDoubleIfChanged(getDutyCycle().getValue(), now);
                         break;
                     case FORWARD_LIMIT_SWITCH:
-                        thisEntry.logBooleanIfChanged(getForwardLimit().getValue().value == 0, now);
+                        thisEntry.logBooleanIfChanged(getForwardLimit().getValue() == ForwardLimitValue.ClosedToGround,
+                                now);
                         break;
                     case REVERSE_LIMIT_SWITCH:
-                        thisEntry.logBooleanIfChanged(getReverseLimit().getValue().value == 0, now);
+                        thisEntry.logBooleanIfChanged(getReverseLimit().getValue() == ReverseLimitValue.ClosedToGround,
+                                now);
                         break;
                     case SELECTED_SENSOR_POSITION:
-                        thisEntry.logDoubleIfChanged(getRotorPosition().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getPosition().getValue(), now);
                         break;
                     case SELECTED_SENSOR_VELOCITY:
-                        thisEntry.logDoubleIfChanged(getRotorVelocity().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getVelocity().getValue(), now);
                         break;
                     case STATOR_CURRENT:
                         thisEntry.logDoubleIfChanged(getStatorCurrent().getValue(), now);
@@ -166,10 +177,10 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                         thisEntry.logDoubleIfChanged(getMotorVoltage().getValue(), now);
                         break;
                     case INTEGRATED_SENSOR_POSITION:
-                        thisEntry.logDoubleIfChanged(getPosition().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getRotorPosition().getValue(), now);
                         break;
                     case INTEGRATED_SENSOR_VELOCITY:
-                        thisEntry.logDoubleIfChanged(getVelocity().getValue(), now);
+                        thisEntry.logDoubleIfChanged(getRotorVelocity().getValue(), now);
                         break;
                     default:
                         break;
@@ -184,17 +195,16 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
     /**
      * PercentOut replacement.
      * Just enter a speed (double) and the motor will use
-     * {@link ControlModeValue#DutyCycleOut}
+     * {@link ControlModeValue#DutyCycleOut} with FOC enabled
      */
     @Override
     public void set(double speed) {
-
         /* Set speed using DutyCycleOut */
         super.set(speed);
 
         try {// Don't jeopardize robot functionality
              // Filter the 4 potential log items down to the ones allowed here
-            EnumSet<LogItem> potentialLogItems = EnumSet.of(LogItem.SET_FUNCTION_CONTROL_MODE);
+            EnumSet<LogItem> potentialLogItems = EnumSet.of(LogItem.SET_FUNCTION_CONTROL_MODE, LogItem.SET_FUNCTION_VALUE);
             potentialLogItems.retainAll(mDataLogEntries.keySet());
             potentialLogItems.retainAll(LoggyThingManager.getInstance().getGlobalMaxLogLevel());
             long now = WPIUtilJNI.now();
@@ -206,7 +216,7 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
                         thisEntry.logStringIfChanged(getControlMode().toString(), now);
                         break;
                     case SET_FUNCTION_VALUE:
-                        thisEntry.logDoubleIfChanged(get(), now);
+                        thisEntry.logDoubleIfChanged(speed, now);
                         break;
                     default:
                         break;
@@ -223,13 +233,11 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
 
     @Override
     public StatusCode setControl(ControlRequest request) {
-
         if (super.setControl(request) != StatusCode.OK) {
             return StatusCode.GeneralError;
         }
 
-        try {// Don't jeopardize robot functionality
-            // Filter the 4 potential log items down to the ones allowed here
+        try {
             EnumSet<LogItem> potentialLogItems = EnumSet.of(LogItem.SET_FUNCTION_CONTROL_MODE);
             potentialLogItems.retainAll(mDataLogEntries.keySet());
             potentialLogItems.retainAll(LoggyThingManager.getInstance().getGlobalMaxLogLevel());
@@ -239,10 +247,7 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
 
                 switch (thisLogItem) {
                     case SET_FUNCTION_CONTROL_MODE:
-                        thisEntry.logStringIfChanged(getControlMode().getValue().toString(), now);
-                        break;
-                    case SET_FUNCTION_VALUE:
-                        thisEntry.logDoubleIfChanged(get(), now);
+                        thisEntry.logStringIfChanged(request.getName(), now);
                         break;
                     default:
                         break;
@@ -263,25 +268,29 @@ public class LoggyTalonFX extends TalonFX implements ILoggyMotor {
     // public StatusCode
 
     /**
-     * configureSlot 0
+     * configre TalonFX slot
      * 
-     * @param config TalonFXConfiguration
-     * @return StatusCode
+     * @param config    you can pass in a {@link Slot0Configs}, {@link Slot1Configs}, {@link Slot2Configs}, or {@link TalonFXConfiguration
+     * @return {@link StatusCode#OK} if successful, else {@link StatusCode#ConfigFailed}
      */
-    public StatusCode setMotionProfile(TalonFXConfiguration config) {
-        Slot1Configs configSlot = config.Slot1;
-        configSlot.kS = 0.25;
-        configSlot.kV = 0.12;
-        configSlot.kA = 0.01;
-        configSlot.kP = 4.8;
-        configSlot.kI = 0;
-        configSlot.kD = 0.01;
-        config.MotionMagic.MotionMagicCruiseVelocity = 80; // Target cruise velocity of 80 rps
-        config.MotionMagic.MotionMagicAcceleration = 160; // Target acceleration of 160 rps/s (0.5 seconds)
-        config.MotionMagic.MotionMagicJerk = 1600; // Target jerk of 1600 rps/s/s (0.1 seconds)
-
-        return super.getConfigurator().apply(config);
+    public StatusCode setSlotConfig(Object config) {
+        if (config instanceof Slot0Configs) {
+            return super.getConfigurator().apply((Slot0Configs) config);
+        } else if (config instanceof Slot1Configs) {
+            return super.getConfigurator().apply((Slot1Configs) config);
+        } else if (config instanceof Slot2Configs) {
+            return super.getConfigurator().apply((Slot2Configs) config);
+        } else if (config instanceof TalonFXConfiguration) {
+            return super.getConfigurator().apply((TalonFXConfiguration) config);
+        } else {
+            return StatusCode.ConfigFailed;
+        }
     }
+
+    // @Override
+    // public StatusCode set(ControlRequest req) {
+    //     super.get()
+    // }
 
     @Override
     public void setVoltage(double outputVolts) {

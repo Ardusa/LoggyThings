@@ -120,7 +120,7 @@ public interface ILoggyMotor {
         // TODO soft limits
 
         // CTRE status frame 1
-        OUTPUT_PERCENT,
+        OUTPUT_PERCENT(LogItemType.DOUBLE),
         FORWARD_LIMIT_SWITCH(LogItemType.BOOLEAN),
         REVERSE_LIMIT_SWITCH(LogItemType.BOOLEAN),
 

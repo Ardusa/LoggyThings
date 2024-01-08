@@ -4,11 +4,11 @@ import edu.wpi.first.wpilibj.DataLogManager;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
 
 /**
- * Appends a value to the constructed log file
+ * Appends a value to the constructed log file and writes the data to the console
  */
 public class LoggyPrintCommand extends InstantCommand {
     /**
-     * Appends a double to the constructed log file
+     * Appends a double to the constructed log file and writes the data to the console
      * 
      * @param toLog the double to log
      */
@@ -17,7 +17,7 @@ public class LoggyPrintCommand extends InstantCommand {
     }
 
     /**
-     * Appends an integer to the constructed log file
+     * Appends an integer to the constructed log file and writes the data to the console
      * 
      * @param toLog the int to log
      */
@@ -26,7 +26,7 @@ public class LoggyPrintCommand extends InstantCommand {
     }
 
     /**
-     * Appends an Object to the constructed log file
+     * Appends an Object to the constructed log file and writes the data to the console
      * 
      * @param toLog the Object to log
      */
@@ -35,7 +35,7 @@ public class LoggyPrintCommand extends InstantCommand {
     }
 
     /**
-     * Appends a String to the constructed log file
+     * Appends a String to the constructed log file and writes the data to the console
      * 
      * @param toLog the String to log
      */

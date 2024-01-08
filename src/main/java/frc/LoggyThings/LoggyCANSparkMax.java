@@ -5,7 +5,7 @@ import java.util.HashMap;
 
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVLibError;
-import com.revrobotics.SparkMaxLimitSwitch.Type;
+import com.revrobotics.SparkLimitSwitch.Type;
 
 import edu.wpi.first.util.WPIUtilJNI;
 
@@ -13,12 +13,13 @@ import edu.wpi.first.util.WPIUtilJNI;
  * A {@link CANSparkMax} intizialized using {@link ILoggyMotor}
  */
 public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
-    
+
     private EnumSet<ILoggyMotor.LogItem> mLogLevel = EnumSet.noneOf(ILoggyMotor.LogItem.class);
     private HashMap<LogItem, DataLogEntryWithHistory> mDataLogEntries = new HashMap<LogItem, DataLogEntryWithHistory>();
     private long mLogPeriod = 100000;// default to 100ms (unit is microseconds)
     private long lastLogTime = (long) Math.abs(Math.random() * 100000);
     private String mLogPath;
+    private Type forwardSwitch = Type.kNormallyOpen, reverseSwitch = Type.kNormallyOpen;
 
     /**
      * Constructs a new LoggyCANSparkMax and registers it with
@@ -112,10 +113,10 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
                         thisEntry.logDoubleIfChanged(getAppliedOutput(), now);
                         break;
                     case FORWARD_LIMIT_SWITCH:
-                        thisEntry.logBooleanIfChanged(getForwardLimitSwitch(Type.kNormallyOpen).isPressed(), now);
+                        thisEntry.logBooleanIfChanged(getForwardLimitSwitch(forwardSwitch).isPressed(), now);
                         break;
                     case REVERSE_LIMIT_SWITCH:
-                        thisEntry.logBooleanIfChanged(getReverseLimitSwitch(Type.kNormallyOpen).isPressed(), now);
+                        thisEntry.logBooleanIfChanged(getReverseLimitSwitch(reverseSwitch).isPressed(), now);
                         break;
                     case SELECTED_SENSOR_POSITION:
                         thisEntry.logDoubleIfChanged(getEncoder().getPosition(), now);
@@ -237,5 +238,15 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
     @Override
     public long getLastLogTime() {
         return lastLogTime;
+    }
+
+    /**
+     * Set the limit switches to normally open or normally closed, see {@link Type}
+     * @param type forward limit switch type
+     * @param type2 reverse limit switch type
+     */
+    public void setLimitSwitchType(Type type, Type type2) {
+        forwardSwitch = type;
+        reverseSwitch = type2;
     }
 }
