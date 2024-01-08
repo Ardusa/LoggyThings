@@ -3,6 +3,7 @@ package frc.LoggyThings;
 import java.util.EnumSet;
 import java.util.HashMap;
 
+import edu.wpi.first.util.WPIUtilJNI;
 import edu.wpi.first.util.datalog.DataLog;
 import edu.wpi.first.util.datalog.DataLogEntry;
 import edu.wpi.first.wpilibj.DataLogManager;
@@ -71,7 +72,7 @@ public interface ILoggyMotor {
          * @param now      a long value representing the time
          */
         void logBooleanIfChanged(boolean newValue, long now) {
-            if ((((Boolean) mLastValue).booleanValue() != newValue) || (now > (lastLogTime + 500000))) {
+            if ((((Boolean) mLastValue).booleanValue() != newValue) || hasHalfSecondPassed()) {
                 m_log.appendDouble(m_entry, newValue ? 1.0 : 0, now);
                 mLastValue = Boolean.valueOf(newValue);
                 lastLogTime = now;
@@ -85,7 +86,7 @@ public interface ILoggyMotor {
          * @param now      a long value representing the time
          */
         void logStringIfChanged(String newValue, long now) {
-            if ((!((String) mLastValue).equals(newValue)) || (now > (lastLogTime + 500000))) {
+            if ((!((String) mLastValue).equals(newValue)) || hasHalfSecondPassed()) {
                 m_log.appendString(m_entry, newValue, now);
                 mLastValue = newValue;
                 lastLogTime = now;
@@ -99,11 +100,19 @@ public interface ILoggyMotor {
          * @param now      a long value representing the time
          */
         void logDoubleIfChanged(double newValue, long now) {
-            if ((((Double) mLastValue).doubleValue() != newValue) || (now > (lastLogTime + 500000))) {
+            if ((((Double) mLastValue).doubleValue() != newValue) || hasHalfSecondPassed()) {
                 m_log.appendDouble(m_entry, newValue, now);
                 mLastValue = newValue;
                 lastLogTime = now;
             }
+        }
+
+        /**
+         * returns true if half a second has passed since the last log
+         * @return
+         */
+        public boolean hasHalfSecondPassed() {
+            return (WPIUtilJNI.now() > (lastLogTime + 500000));
         }
     }
 
@@ -149,7 +158,7 @@ public interface ILoggyMotor {
         CLOSED_LOOP_TARGET,
 
         // Everything only
-        
+
         // CTRE status frame 1
         OUTPUT_VOLTAGE,
 
@@ -225,6 +234,7 @@ public interface ILoggyMotor {
 
     /**
      * Defaults to 100ms
+     * 
      * @return Minimum length of microseconds to wait before checking for
      *         new values periodically
      */

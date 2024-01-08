@@ -16,7 +16,6 @@ import com.ctre.phoenix6.signals.NeutralModeValue;
 import com.ctre.phoenix6.signals.ReverseLimitValue;
 
 import edu.wpi.first.util.WPIUtilJNI;
-import edu.wpi.first.wpilibj.DutyCycle;
 
 /**
  * A {@link TalonFX} intizialized using {@link ILoggyMotor}
