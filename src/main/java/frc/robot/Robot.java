@@ -4,18 +4,16 @@
 
 package frc.robot;
 
-import com.ctre.phoenix.motorcontrol.ControlMode;
-import com.revrobotics.CANSparkMaxLowLevel.MotorType;
+import com.ctre.phoenix6.controls.PositionDutyCycle;
+import com.revrobotics.CANSparkLowLevel.MotorType;
 
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj2.command.Command;
-import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import frc.LoggyThings.ILoggyMotor;
 import frc.LoggyThings.LoggyCANSparkMax;
+import frc.LoggyThings.LoggyTalonFX;
 import frc.LoggyThings.LoggyThingManager;
-import frc.LoggyThings.LoggyWPI_TalonFX;
 
 /**
  * The VM is configured to automatically run this class, and to call the
@@ -27,11 +25,12 @@ import frc.LoggyThings.LoggyWPI_TalonFX;
  * project.
  */
 public class Robot extends TimedRobot {
-  private LoggyWPI_TalonFX falcon = new LoggyWPI_TalonFX(1, "/ExampleSubsystem/falcon/",
-      ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING);
-      private LoggyWPI_TalonFX falcon3 = new LoggyWPI_TalonFX(4, "/ExampleSubsystem/falcon3/",
-      ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING);
-  private LoggyWPI_TalonFX falcon2 = new LoggyWPI_TalonFX(2, "/falcon2/", ILoggyMotor.LogItem.LOGLEVEL_MINIMAL);
+  private LoggyTalonFX falcon = new LoggyTalonFX(1, "/ExampleSubsystem/falcon/",
+      ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING, false);
+  private LoggyTalonFX falcon3 = new LoggyTalonFX(4, "/ExampleSubsystem/falcon3/",
+      ILoggyMotor.LogItem.LOGLEVEL_EVERYTHING, false);
+
+  private LoggyTalonFX falcon2 = new LoggyTalonFX(2, "/falcon2/", ILoggyMotor.LogItem.LOGLEVEL_MINIMAL, true);
   private LoggyCANSparkMax spark = new LoggyCANSparkMax(3, MotorType.kBrushless);
 
   @Override
@@ -43,10 +42,14 @@ public class Robot extends TimedRobot {
   @Override
   public void teleopPeriodic() {
     Joystick stick = new Joystick(0);
-    if(stick.getX() > 0.1){
-      falcon.set(ControlMode.PercentOutput, stick.getX());
-    }else
-      falcon.set(ControlMode.Position,Timer.getFPGATimestamp());
+    if (stick.getX() > 0.1) {
+      falcon.set(stick.getX());
+    } else
+      /*
+       * Will run the motor in a clockwise motion because the time slowly increases
+       * per each period
+       */
+      falcon.setControl(new PositionDutyCycle(Timer.getFPGATimestamp()));
     spark.set(stick.getY());
     falcon2.set(Math.sin(Timer.getFPGATimestamp()));
     falcon3.set(Math.cos(Timer.getFPGATimestamp()));

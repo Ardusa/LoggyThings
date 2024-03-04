@@ -1,16 +1,49 @@
 package frc.LoggyThings;
 
 import edu.wpi.first.wpilibj.DataLogManager;
-import edu.wpi.first.wpilibj.command.PrintCommand;
+import edu.wpi.first.wpilibj2.command.InstantCommand;
 
-public class LoggyPrintCommand extends PrintCommand{
-    String m_text;
-    LoggyPrintCommand(String text){
-        super(text);
-        m_text=text;
+/**
+ * Appends a value to the constructed log file and writes the data to the console
+ */
+public class LoggyPrintCommand extends InstantCommand {
+    /**
+     * Appends a double to the constructed log file and writes the data to the console
+     * 
+     * @param toLog the double to log
+     */
+    public LoggyPrintCommand(double toLog) {
+        super(() -> DataLogManager.log(Double.toString(toLog)));
     }
-    @Override
-    protected void initialize() {
-        DataLogManager.log(m_text);
+
+    /**
+     * Appends an integer to the constructed log file and writes the data to the console
+     * 
+     * @param toLog the int to log
+     */
+    public LoggyPrintCommand(int toLog) {
+        super(() -> DataLogManager.log(Integer.toString(toLog)));
+    }
+
+    /**
+     * Appends an Object to the constructed log file and writes the data to the console
+     * 
+     * @param toLog the Object to log
+     */
+    public LoggyPrintCommand(Object toLog) {
+        super(() -> DataLogManager.log(toLog.toString()));
+    }
+
+    /**
+     * Appends a String to the constructed log file and writes the data to the console
+     * 
+     * @param toLog the String to log
+     */
+    public LoggyPrintCommand(String toLog) {
+        super(() -> DataLogManager.log(toLog));
+    }
+
+    public boolean runsWhenDisabled() {
+        return true;
     }
 }

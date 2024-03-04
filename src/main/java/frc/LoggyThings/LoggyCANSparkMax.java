@@ -5,29 +5,58 @@ import java.util.HashMap;
 
 import com.revrobotics.CANSparkMax;
 import com.revrobotics.REVLibError;
-import com.revrobotics.SparkMaxLimitSwitch.Type;
+import com.revrobotics.SparkLimitSwitch.Type;
 
 import edu.wpi.first.util.WPIUtilJNI;
 
+/**
+ * A {@link CANSparkMax} intizialized using {@link ILoggyMotor}
+ */
 public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
+
     private EnumSet<ILoggyMotor.LogItem> mLogLevel = EnumSet.noneOf(ILoggyMotor.LogItem.class);
     private HashMap<LogItem, DataLogEntryWithHistory> mDataLogEntries = new HashMap<LogItem, DataLogEntryWithHistory>();
     private long mLogPeriod = 100000;// default to 100ms (unit is microseconds)
-    private long lastLogTime = (long)Math.abs(Math.random()*100000);
+    private long lastLogTime = (long) Math.abs(Math.random() * 100000);
     private String mLogPath;
+    private Type forwardSwitch = Type.kNormallyOpen, reverseSwitch = Type.kNormallyOpen;
 
+    /**
+     * Constructs a new LoggyCANSparkMax and registers it with
+     * {@link LoggyThingManager}
+     * 
+     * @param deviceNumber CAN id
+     * @param motorType    brushed or brushless
+     * @param logPath      String path of log file
+     * @param logLevel     see {@link ILoggyMotor.LogItem}
+     */
     public LoggyCANSparkMax(int deviceNumber, MotorType motorType, String logPath,
             EnumSet<ILoggyMotor.LogItem> logLevel) {
-        super(deviceNumber, motorType);// actually make motor controller
+        super(deviceNumber, motorType);
         mLogPath = logPath;
         setLogLevel(logLevel);
         LoggyThingManager.getInstance().registerLoggyMotor(this);
     }
 
+    /**
+     * Constructs a new LoggyCANSparkMax and registers it with
+     * {@link LoggyThingManager}
+     * 
+     * @param deviceNumber CAN id
+     * @param motorType    brushed or brushless
+     * @param logPath      String path of log file
+     */
     public LoggyCANSparkMax(int deviceNumber, MotorType motorType, String logPath) {
         this(deviceNumber, motorType, logPath, ILoggyMotor.LogItem.LOGLEVEL_DEFAULT);
     }
 
+    /**
+     * Constructs a new LoggyCANSparkMax and registers it with
+     * {@link LoggyThingManager}
+     * 
+     * @param deviceNumber CAN id
+     * @param motorType    brushed or brushless
+     */
     public LoggyCANSparkMax(int deviceNumber, MotorType motorType) {
         this(deviceNumber, motorType, "/loggyMotors/" + String.valueOf(deviceNumber) + "/",
                 ILoggyMotor.LogItem.LOGLEVEL_DEFAULT);
@@ -41,6 +70,11 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
     @Override
     public void setMinimumLogPeriod(double logPeriodSeconds) {
         mLogPeriod = (long) (logPeriodSeconds * 1e6);
+    }
+
+    @Override
+    public long getMinimumLogPeriod() {
+        return mLogPeriod;
     }
 
     @Override
@@ -60,17 +94,17 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
 
     @Override
     public void writeToLog() {
-        // Slow down if commanded by manager
+        /* Slow down if commanded by manager */
         long logPeriod = Long.max(LoggyThingManager.getInstance().getMinGlobalLogPeriod(), mLogPeriod);
         long now = WPIUtilJNI.now();
         if ((now - logPeriod) > lastLogTime) {
 
-            // Only things allowed by the local log level are keys in the datalog entries
+            /* Only things allowed by the local log level are keys in the datalog entries */
             EnumSet<LogItem> potentialLogItems = EnumSet.copyOf(mDataLogEntries.keySet());
 
             // Only things allowed by the global log level
             potentialLogItems.retainAll(LoggyThingManager.getInstance().getGlobalMaxLogLevel());
-            potentialLogItems.removeAll(LogItem.SET_FUNCTION_CALLS);// a set function call, not a periodic status value
+            potentialLogItems.removeAll(LogItem.SET_FUNCTION_CALLS);
 
             for (LogItem thisLogItem : potentialLogItems) {
                 DataLogEntryWithHistory thisEntry = mDataLogEntries.get(thisLogItem);
@@ -78,14 +112,11 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
                     case OUTPUT_PERCENT:
                         thisEntry.logDoubleIfChanged(getAppliedOutput(), now);
                         break;
-                    case FAULTS:
-                        thisEntry.logStringIfChanged(String.valueOf(getFaults()), now);
-                        break;
                     case FORWARD_LIMIT_SWITCH:
-                        thisEntry.logBooleanIfChanged(getForwardLimitSwitch(Type.kNormallyOpen).isPressed(), now);
+                        thisEntry.logBooleanIfChanged(getForwardLimitSwitch(forwardSwitch).isPressed(), now);
                         break;
                     case REVERSE_LIMIT_SWITCH:
-                        thisEntry.logBooleanIfChanged(getReverseLimitSwitch(Type.kNormallyOpen).isPressed(), now);
+                        thisEntry.logBooleanIfChanged(getReverseLimitSwitch(reverseSwitch).isPressed(), now);
                         break;
                     case SELECTED_SENSOR_POSITION:
                         thisEntry.logDoubleIfChanged(getEncoder().getPosition(), now);
@@ -105,32 +136,22 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
                     case TEMPERATURE:
                         thisEntry.logDoubleIfChanged(getMotorTemperature(), now);
                         break;
-                    case INTEGRATED_SENSOR_ABSOLUTE_POSITION:
-                        // not supported
-                        break;
                     case HAS_RESET:
-                        // not supported
+                        /* not supported */
                         break;
                     case CLOSED_LOOP_ERROR:
-                        // not supported
-                        break;
-                    case INTEGRAL_ACCUMULATOR:
-                        thisEntry.logDoubleIfChanged(getPIDController().getIAccum(), now);
-                        break;
-                    case ERROR_DERIVATIVE:
-                        // not supported
                         break;
                     case CLOSED_LOOP_TARGET:
-                        // not supported
+                        /* not supported */
                         break;
                     case OUTPUT_VOLTAGE:
-                        // not supported
+                        /* not supported */
                         break;
                     case INTEGRATED_SENSOR_POSITION:
-                        // don't use alt encoder
+                        /* not supported */
                         break;
                     case INTEGRATED_SENSOR_VELOCITY:
-                        // don't use alt encoder
+                        /* not supported */
                         break;
                     default:
                         break;
@@ -168,7 +189,7 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
             }
             justFailed = false;
         } catch (Exception e) {
-            if (!justFailed) {// don't spam log
+            if (!justFailed) {
                 e.printStackTrace();
                 justFailed = true;
             }
@@ -193,7 +214,7 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
         }
     }
 
-    //TODO hook into setReference, set sensor position
+    // TODO hook into setReference, set sensor position
 
     @Override
     public REVLibError setIdleMode(IdleMode mode) {
@@ -212,5 +233,20 @@ public class LoggyCANSparkMax extends CANSparkMax implements ILoggyMotor {
             }
         }
         return super.setIdleMode(mode);
+    }
+
+    @Override
+    public long getLastLogTime() {
+        return lastLogTime;
+    }
+
+    /**
+     * Set the limit switches to normally open or normally closed, see {@link Type}
+     * @param type forward limit switch type
+     * @param type2 reverse limit switch type
+     */
+    public void setLimitSwitchType(Type type, Type type2) {
+        forwardSwitch = type;
+        reverseSwitch = type2;
     }
 }
